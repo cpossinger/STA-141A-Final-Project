@@ -1,0 +1,43 @@
+---
+title: 'STA 141A Fall 2022: Final Project'
+author: 'Camden Possinger, Christina, Sydney'
+output:
+  html_document:
+    number_sections: yes
+---
+
+# Introduction
+
+# Data Prep
+
+```{r}
+library(readr)
+library(dplyr)
+library(purrr)
+
+spotify_data <- c(
+  "00s",
+  "10s",
+  "60s",
+  "70s",
+  "80s",
+  "90s"
+) %>%
+  set_names() %>%
+  map(~ read_csv(paste0("dataset-of-", .x, ".csv"),
+    show_col_types = FALSE
+  )) %>%
+  bind_rows(.id = "decade") %>%
+  select(-uri, -artist, -track)
+
+spotify_data %>% colnames()
+```
+
+# Exploratory Data Analysis
+
+# Analysis
+
+# Results
+
+# Conclusion
+
