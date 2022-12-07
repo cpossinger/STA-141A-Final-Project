@@ -4,40 +4,159 @@ author: 'Camden Possinger, Christina, Sydney'
 output:
   html_document:
     number_sections: yes
+runtime: shiny
 ---
 
-# Introduction
+```{r, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  out.width = "100%",
+  message = FALSE,
+  warning = FALSE
+)
+```
 
-# Data Prep
+Introduction and research question, Data description, Data visualization, Methodology, Results, Conclusion and discussion of the results;
+
+# Introduction 
+
+# Research Question
+
+# Data Description
 
 ```{r}
 library(readr)
 library(dplyr)
 library(purrr)
+library(ggplot2)
+library(broom)
+library(skimr)
+library(knitr)
+library(kableExtra)
+library(car)
+library(tidyr)
+library(stringr)
+library(plotly)
 
-spotify_data <- c(
-  "00s",
-  "10s",
-  "60s",
-  "70s",
-  "80s",
-  "90s"
-) %>%
-  set_names() %>%
-  map(~ read_csv(paste0("dataset-of-", .x, ".csv"),
-    show_col_types = FALSE
-  )) %>%
-  bind_rows(.id = "decade") %>%
-  select(-uri, -artist, -track)
-
-spotify_data %>% colnames()
+spotify_preprocess <- function() {
+  c(
+    "60s",
+    "70s",
+    "80s",
+    "90s",
+    "00s",
+    "10s"
+  ) %>%
+    purrr::set_names() %>%
+    map(~ read_csv(paste0("dataset-of-", .x, ".csv"),
+      show_col_types = FALSE
+    )) %>%
+    bind_rows(.id = "decade") %>%
+    select(-uri, -artist, -track) %>%
+    mutate(
+      key = factor(key),
+      mode = factor(mode),
+      time_signature = factor(time_signature),
+      decade = factor(decade, levels = c("60s", "70s", "80s", "90s", "00s", "10s")),
+      target = factor(target)
+    ) %>%
+    group_by(decade)
+}
 ```
 
-# Exploratory Data Analysis
+# Data Visualization 
 
-# Analysis
+```{r}
+spotify_preprocess() %>%
+  filter(target == 1) %>%
+  select(where(is.numeric)) %>%
+  skim() %>%
+  focus(
+    decade,
+    numeric.mean,
+    numeric.sd,
+    numeric.hist
+  ) %>%
+  select(-skim_type) %>%
+  setNames(c("Covariate", "Decade", "Mean", "SD", "Hist")) %>%
+  mutate(
+    Mean = round(Mean, digits = 2),
+    SD = round(SD, digits = 2)
+  ) %>%
+  kbl() %>%
+  kable_material() %>%
+  scroll_box(width = "100%", height = "700px")
+```
+
+```{r}
+ggplotly(spotify_preprocess() %>%
+  filter(target == 1) %>%
+  summarise(across(where(is.numeric), list(mean))) %>%
+  pivot_longer(!decade, names_to = "feature", values_to = "mean") %>%
+  mutate(feature = feature %>% str_remove("_1")) %>%
+  ggplot(aes(x = mean, y = decade, fill = decade)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~feature, scales = "free_x")) %>%
+  config(displayModeBar = FALSE)
+```
+
+```{r}
+ggplotly(spotify_preprocess() %>%
+  filter(target == 1) %>%
+  summarise(across(where(is.numeric), list(sd))) %>%
+  pivot_longer(!decade, names_to = "feature", values_to = "sd") %>%
+  mutate(feature = feature %>% str_remove("_1")) %>%
+  ggplot(aes(x = sd, y = decade, fill = decade)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~feature, scales = "free_x")) %>%
+  config(displayModeBar = FALSE)
+```
+
+
+```{r}
+ggplotly(spotify_preprocess() %>%
+  filter(target == 1) %>%
+  select(where(is.numeric)) %>%
+  pivot_longer(!decade, names_to = "feature") %>%
+  ggplot(aes(value, color = decade, fill = decade)) +
+  geom_density(alpha = 0.2) +
+  facet_wrap(~feature, scales = "free")) %>%
+  config(displayModeBar = FALSE)
+```
+
+```{r}
+ggplotly(spotify_preprocess() %>%
+  filter(target == 1) %>%
+  select(where(is.factor), -target) %>%
+  pivot_longer(!decade, names_to = "feature") %>%
+  ggplot(aes(value, color = decade, fill = decade)) +
+  geom_histogram(alpha = 0.2, stat = "count") +
+  facet_wrap(~feature, scales = "free")) %>%
+  config(displayModeBar = FALSE)
+```
+
+
+
+# Methodology
 
 # Results
+
+```{r}
+
+# library(jtools)
+# library(broom)
+#
+# init_model <- function(df) {
+#   glm(target ~ ., family = binomial(link = "logit"), data = df)
+# }
+#
+# test <- spotify_preprocess() %>%
+#   nest() %>%
+#   mutate(full_model = map(data, init_model),
+#          summary = map(full_model,~ .x %>% tidy(exponentiate = TRUE),
+#           vif = map(data,~ .x %>% select(!))))
+```
+
 
 # Conclusion
 
