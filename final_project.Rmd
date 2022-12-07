@@ -45,7 +45,7 @@ library(fastDummies)
 
 
 spotify_preprocess <- function() {
-  c(
+  df <- c(
     "60s",
     "70s",
     "80s",
@@ -58,13 +58,14 @@ spotify_preprocess <- function() {
       show_col_types = FALSE
     )) %>%
     bind_rows(.id = "decade") %>%
-    dplyr::select(-uri, -artist, -track) %>%
-    mutate(
-      key = factor(key),
-      mode = factor(mode),
-      time_signature = factor(time_signature),
-      decade = factor(decade, levels = c("60s", "70s", "80s", "90s", "00s", "10s")),
-      target = factor(target)
+    dplyr::select(
+      -uri,
+      -artist,
+      -track,
+      -instrumentalness,
+      -loudness,
+      -speechiness,
+      -acousticness
     ) %>%
     group_by(decade) %>%
     group_split() %>%
@@ -85,8 +86,28 @@ spotify_preprocess <- function() {
       remove_selected_columns = TRUE,
       remove_first_dummy = TRUE
     ) %>%
-    mutate_if(is.integer, as.factor) %>%
-    group_by(decade)
+    mutate(
+      decade = factor(decade,
+        levels = c(
+          "60s",
+          "70s",
+          "80s",
+          "90s",
+          "00s",
+          "10s"
+        )
+      ),
+      danceability = exp(danceability),
+      energy = exp(energy),
+      valence = exp(valence),
+      chorus_hit = log(chorus_hit),
+      liveness = log(liveness),
+      sections = log(sections),
+      duration_ms = log(duration_ms),
+      target = as.integer(target)
+    )
+
+  df[which(!is.infinite(rowSums(df %>% dplyr::select(where(is.numeric))))), ] %>% group_by(decade)
 }
 ```
 
@@ -95,7 +116,7 @@ spotify_preprocess <- function() {
 ```{r}
 spotify_preprocess() %>%
   filter(target == 1) %>%
-  select(where(is.numeric)) %>%
+  dplyr::select(where(is.double)) %>%
   skim() %>%
   focus(
     decade,
@@ -103,7 +124,7 @@ spotify_preprocess() %>%
     numeric.sd,
     numeric.hist
   ) %>%
-  select(-skim_type) %>%
+  dplyr::select(-skim_type) %>%
   setNames(c("Covariate", "Decade", "Mean", "SD", "Hist")) %>%
   mutate(
     Mean = round(Mean, digits = 2),
@@ -117,7 +138,7 @@ spotify_preprocess() %>%
 ```{r}
 ggplotly(spotify_preprocess() %>%
   filter(target == 1) %>%
-  summarise(across(where(is.numeric), list(mean))) %>%
+  summarise(across(where(is.double), list(mean))) %>%
   pivot_longer(!decade, names_to = "feature", values_to = "mean") %>%
   mutate(feature = feature %>% str_remove("_1")) %>%
   ggplot(aes(x = mean, y = decade, fill = decade)) +
@@ -130,7 +151,7 @@ ggplotly(spotify_preprocess() %>%
 ```{r}
 ggplotly(spotify_preprocess() %>%
   filter(target == 1) %>%
-  summarise(across(where(is.numeric), list(sd))) %>%
+  summarise(across(where(is.double), list(sd))) %>%
   pivot_longer(!decade, names_to = "feature", values_to = "sd") %>%
   mutate(feature = feature %>% str_remove("_1")) %>%
   ggplot(aes(x = sd, y = decade, fill = decade)) +
@@ -144,7 +165,7 @@ ggplotly(spotify_preprocess() %>%
 ```{r}
 ggplotly(spotify_preprocess() %>%
   filter(target == 1) %>%
-  select(where(is.numeric)) %>%
+  dplyr::select(where(is.double)) %>%
   pivot_longer(!decade, names_to = "feature") %>%
   ggplot(aes(value, color = decade, fill = decade)) +
   geom_density(alpha = 0.2) +
@@ -157,7 +178,7 @@ ggplotly(spotify_preprocess() %>%
 ggplotly(
   spotify_preprocess() %>%
     filter(target == 1) %>%
-    select(where(is.factor), -target) %>%
+    dplyr::select(where(is.integer), -target) %>%
     pivot_longer(!decade, names_to = "feature") %>%
     filter(value == 1) %>%
     mutate(value = as.integer(value)) %>%
@@ -165,10 +186,10 @@ ggplotly(
     summarise(sum = sum(value)) %>%
     ggplot(aes(x = sum, y = decade, color = decade, fill = decade)) +
     geom_bar(stat = "identity") +
-    facet_wrap(~feature, scales = "free")
+    facet_wrap(~feature, scales = "free"),
+  height = 1000
 ) %>%
-  config(displayModeBar = FALSE) %>%
-  layout(autosize = TRUE, height = 1000)
+  config(displayModeBar = FALSE)
 ```
 
 
@@ -179,99 +200,222 @@ ggplotly(
 # Results
 
 ```{r}
+create_full_model <- function(df) {
+  glm(target ~ ., family = binomial(link = "logit"), data = df)
+}
 
+create_reduced_model <- function(df, coef) {
+  form <- paste0("target ~ ", paste0(coef, collapse = "+")) %>% as.formula()
+  glm(form, family = binomial(link = "logit"), data = df)
+}
 
-# create_full_model <- function(df) {
-#   glm(target ~ ., family = binomial(link = "logit"), data = df)
-# }
-#
-# create_reduced_model <- function(df, coef) {
-#   form <- paste0("target ~ ", paste0(coef, collapse = "+")) %>% as.formula()
-#   glm(form, family = binomial(link = "logit"), data = df)
-# }
-#
-# create_full_model(spotify_preprocess())
-# spotify_preprocess()
-#
-# full_model <- spotify_preprocess() %>%
-#   nest() %>%
-#   mutate(
-#     model = map(data, create_full_model),
-#     summary = map(model, ~ .x %>% tidy(exponentiate = TRUE)),
-#     vif = map(model, vif),
-#     glance = map(model, glance),
-#     sig_coef = map(summary, ~ .x %>%
-#       filter(p.value <= 0.05, term != "(Intercept)") %>%
-#       pull(term)),
-#     reduced_model = map2(data, sig_coef, create_reduced_model)
-#   )
-#
-# full_model %>%
-#   pull(summary) %>%
-#   bind_rows() %>%
-#   kbl() %>%
-#   kable_material() %>%
-#   pack_rows("60s", 1, 29, label_row_css = "background-color: #666; color: #fff;") %>%
-#   pack_rows("70s", 30, 57, label_row_css = "background-color: #666; color: #fff;") %>%
-#   pack_rows("80s", 58, 85, label_row_css = "background-color: #666; color: #fff;") %>%
-#   pack_rows("90s", 86, 113, label_row_css = "background-color: #666; color: #fff;") %>%
-#   pack_rows("00s", 114, 142, label_row_css = "background-color: #666; color: #fff;") %>%
-#   pack_rows("10s", 143, 171, label_row_css = "background-color: #666; color: #fff;") %>%
-#   scroll_box(width = "100%", height = "700px")
+full_model <- spotify_preprocess() %>%
+  nest() %>%
+  mutate(
+    model = map(data, create_full_model),
+    summary = map(model, ~ .x %>%
+      tidy(exponentiate = TRUE) %>%
+      na.omit()),
+    glance = map(model, glance),
+    sig_coef = map(summary, ~ .x %>%
+      filter(p.value <= 0.05, term != "(Intercept)") %>%
+      pull(term)),
+    reduced_model = map2(data, sig_coef, create_reduced_model)
+  )
+
+reduced_model <- full_model %>%
+  dplyr::select(decade, data, model = reduced_model) %>%
+  mutate(
+    summary = map(model, ~ .x %>% tidy(exponentiate = TRUE)),
+    vif = map(model, vif),
+    glance = map(model, glance),
+    sig_coef = map(summary, ~ .x %>%
+      filter(p.value <= 0.05, term != "(Intercept)") %>%
+      pull(term)),
+    reduced_model = map2(data, sig_coef, create_reduced_model)
+  )
+
+reduced_model <- reduced_model %>%
+  dplyr::select(decade, data, model = reduced_model) %>%
+  mutate(
+    summary = map(model, ~ .x %>% tidy(exponentiate = TRUE)),
+    vif = map(model, vif),
+    glance = map(model, glance)
+  )
 ```
 
 ```{r}
 
+full_model %>%
+  pull(summary) %>%
+  bind_rows() %>%
+  kbl() %>%
+  kable_material() %>%
+  #   pack_rows("60s", 1, 29, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("70s", 30, 57, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("80s", 58, 85, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("90s", 86, 113, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("00s", 114, 142, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("10s", 143, 171, label_row_css = "background-color: #666; color: #fff;") %>%
+  scroll_box(width = "100%", height = "700px")
+```
+
+```{r}
+reduced_model %>%
+  pull(summary) %>%
+  bind_rows() %>%
+  kbl() %>%
+  kable_material() %>%
+  #   pack_rows("60s", 1, 29, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("70s", 30, 57, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("80s", 58, 85, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("90s", 86, 113, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("00s", 114, 142, label_row_css = "background-color: #666; color: #fff;") %>%
+  #   pack_rows("10s", 143, 171, label_row_css = "background-color: #666; color: #fff;") %>%
+  scroll_box(width = "100%", height = "700px")
+```
+
+```{r}
+anova_tbl <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT")) %>%
+  bind_rows()
+row.names(anova_tbl) <- c()
+anova_tbl %>%
+  kbl() %>%
+  kable_material()
+ ```
 
 
-# reduced_model <- full_model %>%
-#   dplyr::select(decade, data, model = reduced_model) %>%
-#   mutate(
-#     summary = map(model, ~ .x %>% tidy(exponentiate = TRUE)),
-#     vif = map(model, vif),
-#     glance = map(model, glance)
-#   )
+```{r}
+
+vif_tbl <- reduced_model$vif %>%
+  bind_rows() %>%
+  t()
+
+colnames(vif_tbl) <- c(
+  "60s",
+  "70s",
+  "80s",
+  "90s",
+  "00s",
+  "10s"
+)
+
+vif_tbl %>%
+  kbl() %>%
+  kable_material() %>%
+  scroll_box(width = "100%", height = "700px")
+```
+```{r}
+
+glance_tbl <- reduced_model$glance %>%
+  bind_rows(.id = "model") %>%
+  mutate(model = c(
+    "60s",
+    "70s",
+    "80s",
+    "90s",
+    "00s",
+    "10s"
+  ))
+
+glance_tbl %>%
+  kbl() %>%
+  kable_material()
 ```
 
 ```{r}
 
-# anova_lst <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT"))
-#
-#
-# anova_lst[[1]]
-# anova_lst[[2]]
-# anova_lst[[3]]
-# anova_lst[[4]]
-# anova_lst[[5]]
-# anova_lst[[6]]
-#
-# reduced_model$summary[[5]] %>% filter(p.value <= 0.05)
-# full_model$summary[[5]]
-#
-# reduced_model$glance[[1]] %>% print(n = 28)
-# full_model$glance[[1]] %>% print(n = 28)
-#
-#
-# full_model$sig_coef[[2]]
-# full_model$summary[[4]]
+scatter_lst <- map2(reduced_model$data, reduced_model$model, function(data, model) {
+  data %>%
+    dplyr::select(where(is.double)) %>%
+    cbind(fitted = model$fitted) %>%
+    pivot_longer(!fitted) %>%
+    ggplot(aes(y = fitted, x = value)) +
+    geom_point() +
+    facet_wrap(~name, scales = "free_x")
+})
 ```
 
+### Evaluating Linear Assumption 
+
+#### 60s
+```{r}
+scatter_lst[[1]]
+```
+
+
+#### 70s
+```{r}
+scatter_lst[[2]]
+```
+
+#### 80s
+```{r}
+scatter_lst[[3]]
+```
+
+#### 90s
+```{r}
+scatter_lst[[4]]
+```
+
+#### 00s
+```{r}
+scatter_lst[[5]]
+```
+
+#### 10s
+```{r}
+scatter_lst[[6]]
+```
+
+
+### Residual Analysis
+
+#### 60s
+```{r}
+reduced_model$model[[1]] %>% autoplot()
+```
+
+#### 70s
+```{r}
+reduced_model$model[[2]] %>% autoplot()
+```
+
+#### 80s
+```{r}
+reduced_model$model[[3]] %>% autoplot()
+```
+
+#### 90s
+```{r}
+reduced_model$model[[4]] %>% autoplot()
+```
+
+#### 00s
+```{r}
+reduced_model$model[[5]] %>% autoplot()
+```
+
+#### 10s
+```{r}
+reduced_model$model[[6]] %>% autoplot()
+```
 
 ```{r}
 
-
-# full_model$data[[2]] %>%
-#   dplyr::select(where(is.numeric)) %>%
-#   cbind(fitted = full_model$model[[2]]$fitted) %>%
-#   pivot_longer(!fitted) %>%
-#   ggplot(aes(y = fitted, x = value)) +
-#   geom_point() +
-#   facet_wrap(~name, scales = "free_x")
-#
-#
-#
-# full_model$model[[2]] %>% autoplot(which = 1:6)
+plot_summs(reduced_model$model,
+  model.names = c(
+    "60s",
+    "70s",
+    "80s",
+    "90s",
+    "00s",
+    "10s"
+  )
+)
 ```
+
 
 
 
