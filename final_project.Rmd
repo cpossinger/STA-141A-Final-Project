@@ -11,6 +11,7 @@ runtime: shiny
 knitr::opts_chunk$set(
   echo = FALSE,
   out.width = "100%",
+  out.height = "100%",
   message = FALSE,
   warning = FALSE
 )
@@ -26,17 +27,22 @@ Introduction and research question, Data description, Data visualization, Method
 
 ```{r}
 library(readr)
-library(dplyr)
 library(purrr)
 library(ggplot2)
 library(broom)
 library(skimr)
 library(knitr)
-library(kableExtra)
 library(car)
 library(tidyr)
 library(stringr)
 library(plotly)
+library(jtools)
+library(broom)
+library(dplyr)
+library(kableExtra)
+library(ggfortify)
+library(fastDummies)
+
 
 spotify_preprocess <- function() {
   c(
@@ -52,7 +58,7 @@ spotify_preprocess <- function() {
       show_col_types = FALSE
     )) %>%
     bind_rows(.id = "decade") %>%
-    select(-uri, -artist, -track) %>%
+    dplyr::select(-uri, -artist, -track) %>%
     mutate(
       key = factor(key),
       mode = factor(mode),
@@ -60,6 +66,26 @@ spotify_preprocess <- function() {
       decade = factor(decade, levels = c("60s", "70s", "80s", "90s", "00s", "10s")),
       target = factor(target)
     ) %>%
+    group_by(decade) %>%
+    group_split() %>%
+    map(~
+      .x %>%
+        mutate(across(
+          where(is.numeric),
+          ~ ifelse(
+            abs(as.numeric(scale(.x))) > 3,
+            NA,
+            .x
+          )
+        )) %>%
+        na.omit()) %>%
+    bind_rows() %>%
+    dummy_cols(
+      select_columns = c("key", "time_signature", "mode"),
+      remove_selected_columns = TRUE,
+      remove_first_dummy = TRUE
+    ) %>%
+    mutate_if(is.integer, as.factor) %>%
     group_by(decade)
 }
 ```
@@ -97,7 +123,8 @@ ggplotly(spotify_preprocess() %>%
   ggplot(aes(x = mean, y = decade, fill = decade)) +
   geom_bar(stat = "identity") +
   facet_wrap(~feature, scales = "free_x")) %>%
-  config(displayModeBar = FALSE)
+  config(displayModeBar = FALSE) %>%
+  layout(autosize = TRUE, height = 1000)
 ```
 
 ```{r}
@@ -109,7 +136,8 @@ ggplotly(spotify_preprocess() %>%
   ggplot(aes(x = sd, y = decade, fill = decade)) +
   geom_bar(stat = "identity") +
   facet_wrap(~feature, scales = "free_x")) %>%
-  config(displayModeBar = FALSE)
+  config(displayModeBar = FALSE) %>%
+  layout(autosize = TRUE, height = 1000)
 ```
 
 
@@ -121,19 +149,28 @@ ggplotly(spotify_preprocess() %>%
   ggplot(aes(value, color = decade, fill = decade)) +
   geom_density(alpha = 0.2) +
   facet_wrap(~feature, scales = "free")) %>%
-  config(displayModeBar = FALSE)
+  config(displayModeBar = FALSE) %>%
+  layout(autosize = TRUE, height = 1000)
 ```
 
 ```{r}
-ggplotly(spotify_preprocess() %>%
-  filter(target == 1) %>%
-  select(where(is.factor), -target) %>%
-  pivot_longer(!decade, names_to = "feature") %>%
-  ggplot(aes(value, color = decade, fill = decade)) +
-  geom_histogram(alpha = 0.2, stat = "count") +
-  facet_wrap(~feature, scales = "free")) %>%
-  config(displayModeBar = FALSE)
+ggplotly(
+  spotify_preprocess() %>%
+    filter(target == 1) %>%
+    select(where(is.factor), -target) %>%
+    pivot_longer(!decade, names_to = "feature") %>%
+    filter(value == 1) %>%
+    mutate(value = as.integer(value)) %>%
+    group_by(decade, feature) %>%
+    summarise(sum = sum(value)) %>%
+    ggplot(aes(x = sum, y = decade, color = decade, fill = decade)) +
+    geom_bar(stat = "identity") +
+    facet_wrap(~feature, scales = "free")
+) %>%
+  config(displayModeBar = FALSE) %>%
+  layout(autosize = TRUE, height = 1000)
 ```
+
 
 
 
@@ -143,19 +180,99 @@ ggplotly(spotify_preprocess() %>%
 
 ```{r}
 
-# library(jtools)
-# library(broom)
-#
-# init_model <- function(df) {
+
+# create_full_model <- function(df) {
 #   glm(target ~ ., family = binomial(link = "logit"), data = df)
 # }
 #
-# test <- spotify_preprocess() %>%
+# create_reduced_model <- function(df, coef) {
+#   form <- paste0("target ~ ", paste0(coef, collapse = "+")) %>% as.formula()
+#   glm(form, family = binomial(link = "logit"), data = df)
+# }
+#
+# create_full_model(spotify_preprocess())
+# spotify_preprocess()
+#
+# full_model <- spotify_preprocess() %>%
 #   nest() %>%
-#   mutate(full_model = map(data, init_model),
-#          summary = map(full_model,~ .x %>% tidy(exponentiate = TRUE),
-#           vif = map(data,~ .x %>% select(!))))
+#   mutate(
+#     model = map(data, create_full_model),
+#     summary = map(model, ~ .x %>% tidy(exponentiate = TRUE)),
+#     vif = map(model, vif),
+#     glance = map(model, glance),
+#     sig_coef = map(summary, ~ .x %>%
+#       filter(p.value <= 0.05, term != "(Intercept)") %>%
+#       pull(term)),
+#     reduced_model = map2(data, sig_coef, create_reduced_model)
+#   )
+#
+# full_model %>%
+#   pull(summary) %>%
+#   bind_rows() %>%
+#   kbl() %>%
+#   kable_material() %>%
+#   pack_rows("60s", 1, 29, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("70s", 30, 57, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("80s", 58, 85, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("90s", 86, 113, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("00s", 114, 142, label_row_css = "background-color: #666; color: #fff;") %>%
+#   pack_rows("10s", 143, 171, label_row_css = "background-color: #666; color: #fff;") %>%
+#   scroll_box(width = "100%", height = "700px")
 ```
+
+```{r}
+
+
+
+# reduced_model <- full_model %>%
+#   dplyr::select(decade, data, model = reduced_model) %>%
+#   mutate(
+#     summary = map(model, ~ .x %>% tidy(exponentiate = TRUE)),
+#     vif = map(model, vif),
+#     glance = map(model, glance)
+#   )
+```
+
+```{r}
+
+# anova_lst <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT"))
+#
+#
+# anova_lst[[1]]
+# anova_lst[[2]]
+# anova_lst[[3]]
+# anova_lst[[4]]
+# anova_lst[[5]]
+# anova_lst[[6]]
+#
+# reduced_model$summary[[5]] %>% filter(p.value <= 0.05)
+# full_model$summary[[5]]
+#
+# reduced_model$glance[[1]] %>% print(n = 28)
+# full_model$glance[[1]] %>% print(n = 28)
+#
+#
+# full_model$sig_coef[[2]]
+# full_model$summary[[4]]
+```
+
+
+```{r}
+
+
+# full_model$data[[2]] %>%
+#   dplyr::select(where(is.numeric)) %>%
+#   cbind(fitted = full_model$model[[2]]$fitted) %>%
+#   pivot_longer(!fitted) %>%
+#   ggplot(aes(y = fitted, x = value)) +
+#   geom_point() +
+#   facet_wrap(~name, scales = "free_x")
+#
+#
+#
+# full_model$model[[2]] %>% autoplot(which = 1:6)
+```
+
 
 
 # Conclusion
