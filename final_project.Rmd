@@ -116,7 +116,7 @@ Our goal is to make conclusions of what features made songs correspond to the de
 
 # Data Description
 The data is derived from the website Kaggle under the post ‘The Spotify Hit Predictor Dataset (1960 - 2019), which consists of more than 40,000 songs that we have merged into one dataset. The dataset originally contained nineteen different features and we removed seven features: uri, artist, track, instrumentalness, loudness, speechiness, and acousticness. The final dataset has eight features, with about 8,000 - 10,000 songs for each decade and 40,000 songs within seven decades.
-In our analysis, the features we excluded were because they would not have a meaningful effect. Some features like uri is just an identifier for the song, and the track is just the artist name which is not related to our current topic. The acousticness is excluded as a confidence measure using binary variables. The features we excluded just were not valid for our research questions as we compare among the decades. We have used transformation for the density which
+In our analysis, the features we excluded were because they would not have a meaningful effect. Some features like uri is just an identifier for the song, and the track is just the artist name which is not related to our current topic. The acousticness is excluded as a confidence measure using binary variables. The features we excluded just were not valid for our research questions as we compare among the decades. 
 
 # Data Visualization 
 
@@ -235,6 +235,8 @@ ggplotly(
 
 # Methodology
 
+To answer our research question, we want to break down the data first, by splitting continuous and discrete variables into decades to understand basic deviations, standard deviations, and such. We notice that it does not look normally distributed, so using log and exponential transformation for density function to better visualize our graphs. Since we noticed that there are so many features in our full model, we want to create a smaller model that only has the most significant features. The smaller model allows us to use multiple linear regression to understand relationships between the features, so we can further compare among the decades. To make sure that the smaller model is useful, we want to fail to reject a null hypothesis. The logistic regression is helpful to conduct inference and predictions of a binary response which is our target feature that determines if the song is a hit or miss. Creating residual plots to understand predicted variables and fitted values. Lastly, to complete our research questions, comparing features between decades to compare and identify popularity within songs.
+
 # Results
 
 ```{r}
@@ -341,6 +343,11 @@ reduced_model %>%
   formatRound(columns = 3:6, digits = 2)
 ```
 
+Full Model vs Reduced Model
+When comparing the reduced model to the larger full model, the reduced model is based on
+ANOVA, analyzing the p-values, creating a better fit model. All insignificant variables were removed from the full model, resulting in the reduced model where all the variables are significant making it the better model to be used.
+
+
 ## Anova Table
 ```{r}
 anova_tbl <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT")) %>%
@@ -401,6 +408,7 @@ vif_tbl %>%
   datatable() %>%
   formatRound(columns = 1:6, digits = 2)
 ```
+For all the variance inflation factors, none of the values exceed 5 therefore there is no multicollinearity.
 
 ## Model Evaluation Table
 ```{r}
@@ -420,6 +428,7 @@ glance_tbl %>%
   datatable() %>%
   formatRound(columns = c(2, 4, 5, 6, 7), digits = 2)
 ```
+AIC high in 80s and 90s, so standard deviation will be higher for the most of the features. With a lower AIC in the 10s decade and a smaller standard deviation, there would possibly be more commercialized sounds.
 
 ```{r}
 scatter_lst <- map2(reduced_model$data, reduced_model$model, function(data, model) {
@@ -471,6 +480,14 @@ scatter_lst[[5]]
 scatter_lst[[6]]
 ```
 
+For the 60’s there is a positive linear correlation between danceability and being a hit. For valence there is a weak positive correlation with being a hit. There is no correlation for chorus_hit, duration_ms, energy, liveness, sections and tempo.
+For the 70’s there is a positive moderate to strong correlation between danceability and the song being a hit. Valence also has a very weak correlation. There is no correlation for chorus_hit, duration_ms, energy, liveness, sections, tempo.
+For the 80’s, there is a weak correlation for danceability, and valence when comparing the real value to the fitted values. The other variables of chorus_hit, duration_ms, liveness, sections, and tempo have no correlation.
+For the 90’s, there is moderate positive correlation for danceability, very weak correlation for energy and valence. The other variables chorus_hit, duration_ms, liveness, sections, and tempo have no correlation.
+For the 00’s, there is weak to moderate positive correlation for danceability. All other variables  showed no correlation.
+For the 10’s there is only a weak to moderate correlation for danceability, and no correlation for the rest of the variables.
+
+
 ## Residual Analysis
 
 ### 60s 
@@ -509,6 +526,12 @@ reduced_model$model[[5]] %>% autoplot(which = 1:2)
 reduced_model$model[[6]] %>% autoplot(which = 1:2)
 ```
 
+
+For the normal Q-Q plots for each of the decades, the data is mostly normally distributed since the plots generally follow a straight line.
+
+
+
+
 ```{r}
 plot_summs(reduced_model$model,
   model.names = c(
@@ -522,5 +545,14 @@ plot_summs(reduced_model$model,
 )
 ```
 
+
+The main features that made a song popular in the 1960’s were higher danceability, lower energy and shorter duration. Discrete values show the keys, there are eleven keys which is a music note indicator, which contains notes ranging from normal A to G and with sharps and flats.  For the 70’s the hit songs had a shorter duration, earlier chorus, and the main key of 8 which is G#/ Ab chords in the songs.  For the 80’s the main predictors of hit songs were lower danceability, higher energy, shorter duration, higher valence (cheery and happy sounds), major modality, greater number of sections, and the main key of 11. For the 80’s lower danceability, higher energy, shorter duration, and the main keys of 1 and 11 with a higher valence meant a more popular song. For the 90’s lower danceability, a main key of  3 and less sections made the song more popular. For the 2000’s higher danceability, lower energy, longer duration, lower number of sections made the song a hit. For the 2010’s higher danceability, longer duration, earlier chorus hit, lower valence (depressing, sad and angry sound), and main keys of 6, 10, and 11 which made songs in this decade a hit. Overall depending on the decade, different features were more prominent.
+
+As the decades progressed, hit songs increased in danceability and energy, but decreased in valence, the 60’s had more happy and cheery sounds while the 2000’s and 2010’s had more depressing and sad sounds. In general, what makes a hit song popular is how danceable it is, the energy the song has and the duration of the song.
+
+
+
+
 # Conclusion
+Based on our analysis of Spotify hit songs from 1960 to 2019, we were able to determine a few key features that made a song a hit each decade as well as in general. As music changed and evolved throughout the decades so did the features that made a song a hit. In the earlier decades happy and cheery music was popular, but in the later decades more depressing and sadder songs gained popularity. Songs with higher danceability and energy rose in popularity in the recent decades as songs with short duration which were once popular decreased in popularity. As shown by the residual analysis, the data is not completely normally distributed which means it is not totally reliable, but is still a good indicator of what makes a song popular. 
 
