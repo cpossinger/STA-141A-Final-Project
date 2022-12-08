@@ -16,13 +16,6 @@ knitr::opts_chunk$set(
   warning = FALSE
 )
 ```
-
-# Introduction 
-
-# Research Question
-
-# Data Description
-
 ```{r}
 library(readr)
 library(purrr)
@@ -109,11 +102,25 @@ spotify_preprocess <- function() {
   df[which(!is.infinite(rowSums(df %>% dplyr::select(where(is.numeric))))), ] %>% group_by(decade)
 }
 ```
+# Introduction 
+For this project, we are going to analyze Spotify songs to determine what features make a song popular corresponding to the decade. We hope to uncover relationships between popular songs through the decades and metrics like danceability, energy, loudness, chorus_hit, sections, valence, and more. 
+
+Music has been able to connect people through various decades. Through the decades, with more advanced technology, there has been an increase in access to music. With this accessibility, we can understand what songs in each decade from 1960 to 2019, so 7 decades to determine what makes a song a hit. As we know, some previous decade songs are still popular amongst this current decade. Spotify was released in 2011 and has an extensive list of songs. While songs are played frequently, some songs are more popular than others. We want to create a model for each decade from the 1960s to the 2010s and compare what makes music popular over time. The dataset we are going to be using contains data from over 40,000 songs from 1960 to 2019 with various attributes obtained from the Spotify API.
+
+Our goal is to make conclusions of what features made songs correspond to the decades and how this correlates through seven different decades we are looking at, from 1960 to 2019. In analyzing these trends, we can decide what features in each decade had made the song popular. This will be accomplished by conducting exploratory analysis and comparing multiple variables, as well as running regressions and performing transformations as needed. In doing this: we hope to answer the following questions: 
+
+# Research Questions
+- What features make the song popular in that decade?
+- What features are consistent among the decades?
+- What in general makes it a hit song?
+
+# Data Description
+The data is derived from the website Kaggle under the post ‘The Spotify Hit Predictor Dataset (1960 - 2019), which consists of more than 40,000 songs that we have merged into one dataset. The dataset originally contained nineteen different features and we removed seven features: uri, artist, track, instrumentalness, loudness, speechiness, and acousticness. The final dataset has eight features, with about 8,000 - 10,000 songs for each decade and 40,000 songs within seven decades.
+In our analysis, the features we excluded were because they would not have a meaningful effect. Some features like uri is just an identifier for the song, and the track is just the artist name which is not related to our current topic. The acousticness is excluded as a confidence measure using binary variables. The features we excluded just were not valid for our research questions as we compare among the decades. We have used transformation for the density which
 
 # Data Visualization 
 
 ## Summary Statistics
-
 ```{r}
 spotify_preprocess() %>%
   filter(target == 1) %>%
@@ -145,7 +152,7 @@ spotify_preprocess() %>%
     ))
   ) %>%
   formatRound(columns = 2:4, digits = 2)
-  ```
+```
 
 ## Continous Covariates
 
@@ -332,7 +339,7 @@ reduced_model %>%
     ))
   ) %>%
   formatRound(columns = 3:6, digits = 2)
-  ```
+```
 
 ## Anova Table
 ```{r}
@@ -365,6 +372,15 @@ anova_tbl %>%
   ) %>%
   formatRound(columns = c(3, 5, 6), digits = 2)
 ```
+The ANOVA Likelihood Ratio Tests are defined as:     
+
+\[H_0: \beta_1 = \beta_2 = ... = \beta_p = 0\] 
+\[H_A: \text{at least one }  \beta_i \neq 0\] 
+\[i = 1,...,p\] 
+
+We fail to reject each test given by the p-value in the above table at significance level 0.05. 
+Here we can conclude that for each decade the reduced model is equivalent to each full model. 
+From now on we'll consider the reduced models.
 
 ## VIF Table
 ```{r}
@@ -384,7 +400,8 @@ colnames(vif_tbl) <- c(
 vif_tbl %>%
   datatable() %>%
   formatRound(columns = 1:6, digits = 2)
-  ```
+```
+
 ## Model Evaluation Table
 ```{r}
 
