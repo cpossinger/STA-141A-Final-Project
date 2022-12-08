@@ -137,7 +137,7 @@ spotify_preprocess() %>%
       dataSrc = 1,
       startRender = JS(
         "function(rows, group) {",
-        "  var style ='background-color:  #013220;'",
+        "  var style ='background-color:  #adadad;'",
         "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
         "  return $(`<tr>${td}</tr>`);",
         "}"
@@ -294,7 +294,7 @@ full_model %>%
       dataSrc = 1,
       startRender = JS(
         "function(rows, group) {",
-        "  var style ='background-color:  #013220;'",
+        "  var style ='background-color:  #adadad;'",
         "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
         "  return $(`<tr>${td}</tr>`);",
         "}"
@@ -324,7 +324,7 @@ reduced_model %>%
       dataSrc = 1,
       startRender = JS(
         "function(rows, group) {",
-        "  var style ='background-color:  #013220;'",
+        "  var style ='background-color:  #adadad;'",
         "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
         "  return $(`<tr>${td}</tr>`);",
         "}"
@@ -356,7 +356,7 @@ anova_tbl %>%
       dataSrc = 1,
       startRender = JS(
         "function(rows, group) {",
-        "  var style ='background-color:  #013220;'",
+        "  var style ='background-color:  #adadad;'",
         "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
         "  return $(`<tr>${td}</tr>`);",
         "}"
