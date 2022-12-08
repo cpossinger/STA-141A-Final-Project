@@ -1,10 +1,7 @@
 ---
-title: 'STA 141A Fall 2022: Final Project'
-author: 'Camden Possinger, Christina, Sydney'
-output:
-  html_document:
-    number_sections: yes
-runtime: shiny
+title: 'STA-141A Fall 2022: Final Project'
+author: 'Camden Possinger, Christina LI, Sydney Lee'
+date: "`r Sys.Date()`"
 ---
 
 ```{r, include=FALSE}
@@ -16,8 +13,6 @@ knitr::opts_chunk$set(
   warning = FALSE
 )
 ```
-
-Introduction and research question, Data description, Data visualization, Methodology, Results, Conclusion and discussion of the results;
 
 # Introduction 
 
@@ -132,46 +127,64 @@ spotify_preprocess() %>%
   ) %>%
   kbl() %>%
   kable_material() %>%
-  scroll_box(width = "100%", height = "700px")
+  scroll_box(
+    width = "100%",
+    height = "700px"
+  )
 ```
 
 ```{r}
-ggplotly(spotify_preprocess() %>%
-  filter(target == 1) %>%
-  summarise(across(where(is.double), list(mean))) %>%
-  pivot_longer(!decade, names_to = "feature", values_to = "mean") %>%
-  mutate(feature = feature %>% str_remove("_1")) %>%
-  ggplot(aes(x = mean, y = decade, fill = decade)) +
-  geom_bar(stat = "identity") +
-  facet_wrap(~feature, scales = "free_x")) %>%
-  config(displayModeBar = FALSE) %>%
-  layout(autosize = TRUE, height = 1000)
+ggplotly(
+  spotify_preprocess() %>%
+    filter(target == 1) %>%
+    summarise(across(where(is.double), list(mean))) %>%
+    pivot_longer(!decade, names_to = "feature", values_to = "mean") %>%
+    mutate(feature = feature %>% str_remove("_1")) %>%
+    ggplot(aes(x = mean, y = decade, fill = decade)) +
+    geom_bar(stat = "identity") +
+    ylab("Decade") +
+    xlab("Mean") +
+    labs(fill = "Decade") +
+    facet_wrap(~feature, scales = "free_x"),
+  height = 1000
+) %>%
+  config(displayModeBar = FALSE)
 ```
 
 ```{r}
-ggplotly(spotify_preprocess() %>%
-  filter(target == 1) %>%
-  summarise(across(where(is.double), list(sd))) %>%
-  pivot_longer(!decade, names_to = "feature", values_to = "sd") %>%
-  mutate(feature = feature %>% str_remove("_1")) %>%
-  ggplot(aes(x = sd, y = decade, fill = decade)) +
-  geom_bar(stat = "identity") +
-  facet_wrap(~feature, scales = "free_x")) %>%
-  config(displayModeBar = FALSE) %>%
-  layout(autosize = TRUE, height = 1000)
+ggplotly(
+  spotify_preprocess() %>%
+    filter(target == 1) %>%
+    summarise(across(where(is.double), list(sd))) %>%
+    pivot_longer(!decade, names_to = "feature", values_to = "sd") %>%
+    mutate(feature = feature %>% str_remove("_1")) %>%
+    ggplot(aes(x = sd, y = decade, fill = decade)) +
+    geom_bar(stat = "identity") +
+    ylab("Decade") +
+    xlab("SD") +
+    labs(fill = "Decade") +
+    facet_wrap(~feature, scales = "free_x"),
+  height = 1000
+) %>%
+  config(displayModeBar = FALSE)
 ```
 
 
 ```{r}
-ggplotly(spotify_preprocess() %>%
-  filter(target == 1) %>%
-  dplyr::select(where(is.double)) %>%
-  pivot_longer(!decade, names_to = "feature") %>%
-  ggplot(aes(value, color = decade, fill = decade)) +
-  geom_density(alpha = 0.2) +
-  facet_wrap(~feature, scales = "free")) %>%
-  config(displayModeBar = FALSE) %>%
-  layout(autosize = TRUE, height = 1000)
+ggplotly(
+  spotify_preprocess() %>%
+    filter(target == 1) %>%
+    dplyr::select(where(is.double)) %>%
+    pivot_longer(!decade, names_to = "feature") %>%
+    ggplot(aes(value, color = decade, fill = decade)) +
+    geom_density(alpha = 0.2) +
+    ylab("Density") +
+    xlab("Value") +
+    labs(fill = "Decade") +
+    facet_wrap(~feature, scales = "free"),
+  height = 1000
+) %>%
+  config(displayModeBar = FALSE)
 ```
 
 ```{r}
@@ -186,6 +199,9 @@ ggplotly(
     summarise(sum = sum(value)) %>%
     ggplot(aes(x = sum, y = decade, color = decade, fill = decade)) +
     geom_bar(stat = "identity") +
+    ylab("Decade") +
+    xlab("Count") +
+    labs(fill = "Decade") +
     facet_wrap(~feature, scales = "free"),
   height = 1000
 ) %>%
@@ -244,6 +260,7 @@ reduced_model <- reduced_model %>%
   )
 ```
 
+## Full Model Summary
 ```{r}
 
 full_model %>%
@@ -260,6 +277,8 @@ full_model %>%
   scroll_box(width = "100%", height = "700px")
 ```
 
+
+## Reduced Model Summary
 ```{r}
 reduced_model %>%
   pull(summary) %>%
@@ -275,6 +294,7 @@ reduced_model %>%
   scroll_box(width = "100%", height = "700px")
 ```
 
+## Anova Table
 ```{r}
 anova_tbl <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT")) %>%
   bind_rows()
@@ -282,9 +302,9 @@ row.names(anova_tbl) <- c()
 anova_tbl %>%
   kbl() %>%
   kable_material()
- ```
+```
 
-
+## VIF Table
 ```{r}
 
 vif_tbl <- reduced_model$vif %>%
@@ -305,6 +325,7 @@ vif_tbl %>%
   kable_material() %>%
   scroll_box(width = "100%", height = "700px")
 ```
+## Model Evaluation Table
 ```{r}
 
 glance_tbl <- reduced_model$glance %>%
