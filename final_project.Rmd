@@ -1,7 +1,10 @@
 ---
 title: 'STA-141A Fall 2022: Final Project'
-author: 'Camden Possinger, Christina LI, Sydney Lee'
+author: 'Christina Li, Sydney Lee, Camden Possinger'
 date: "`r Sys.Date()`"
+output: 
+  rmdformats::downcute:
+    style_switcher: false
 ---
 
 ```{r, include=FALSE}
@@ -37,6 +40,7 @@ library(dplyr)
 library(kableExtra)
 library(ggfortify)
 library(fastDummies)
+library(DT)
 
 
 spotify_preprocess <- function() {
@@ -108,6 +112,8 @@ spotify_preprocess <- function() {
 
 # Data Visualization 
 
+## Summary Statistics
+
 ```{r}
 spotify_preprocess() %>%
   filter(target == 1) %>%
@@ -125,13 +131,23 @@ spotify_preprocess() %>%
     Mean = round(Mean, digits = 2),
     SD = round(SD, digits = 2)
   ) %>%
-  kbl() %>%
-  kable_material() %>%
-  scroll_box(
-    width = "100%",
-    height = "700px"
-  )
-```
+  datatable(
+    extensions = "RowGroup",
+    options = list(rowGroup = list(
+      dataSrc = 1,
+      startRender = JS(
+        "function(rows, group) {",
+        "  var style ='background-color:  #013220;'",
+        "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
+        "  return $(`<tr>${td}</tr>`);",
+        "}"
+      )
+    ))
+  ) %>%
+  formatRound(columns = 2:4, digits = 2)
+  ```
+
+## Continous Covariates
 
 ```{r}
 ggplotly(
@@ -187,6 +203,8 @@ ggplotly(
   config(displayModeBar = FALSE)
 ```
 
+## Discrete Covariates
+
 ```{r}
 ggplotly(
   spotify_preprocess() %>%
@@ -207,9 +225,6 @@ ggplotly(
 ) %>%
   config(displayModeBar = FALSE)
 ```
-
-
-
 
 # Methodology
 
@@ -264,16 +279,29 @@ reduced_model <- reduced_model %>%
 ```{r}
 full_model %>%
   pull(summary) %>%
-  bind_rows() %>%
-  kbl() %>%
-  kable_material() %>%
-  pack_rows("60s", 1, 23, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("70s", 24, 46, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("80s", 47, 69, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("90s", 70, 92, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("00s", 93, 114, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("10s", 115, 120, label_row_css = "background-color: #666; color: #fff;") %>%
-  scroll_box(width = "100%", height = "700px")
+  setNames(c(
+    "60s",
+    "70s",
+    "80s",
+    "90s",
+    "00s",
+    "10s"
+  )) %>%
+  bind_rows(.id = "model") %>%
+  datatable(
+    extensions = "RowGroup",
+    options = list(rowGroup = list(
+      dataSrc = 1,
+      startRender = JS(
+        "function(rows, group) {",
+        "  var style ='background-color:  #013220;'",
+        "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
+        "  return $(`<tr>${td}</tr>`);",
+        "}"
+      )
+    ))
+  ) %>%
+  formatRound(columns = 3:6, digits = 2)
 ```
 
 
@@ -281,33 +309,61 @@ full_model %>%
 ```{r}
 reduced_model %>%
   pull(summary) %>%
-  bind_rows() %>%
-  kbl() %>%
-  kable_material() %>%
-  pack_rows("60s", 1, 13, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("70s", 14, 22, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("80s", 23, 36, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("90s", 37, 49, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("00s", 50, 59, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("10s", 60, 62, label_row_css = "background-color: #666; color: #fff;") %>%
-  scroll_box(width = "100%", height = "700px")
-```
+  setNames(c(
+    "60s",
+    "70s",
+    "80s",
+    "90s",
+    "00s",
+    "10s"
+  )) %>%
+  bind_rows(.id = "model") %>%
+  datatable(
+    extensions = "RowGroup",
+    options = list(rowGroup = list(
+      dataSrc = 1,
+      startRender = JS(
+        "function(rows, group) {",
+        "  var style ='background-color:  #013220;'",
+        "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
+        "  return $(`<tr>${td}</tr>`);",
+        "}"
+      )
+    ))
+  ) %>%
+  formatRound(columns = 3:6, digits = 2)
+  ```
 
 ## Anova Table
 ```{r}
 anova_tbl <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT")) %>%
-  bind_rows()
-row.names(anova_tbl) <- c()
+  setNames(c(
+    "60s",
+    "70s",
+    "80s",
+    "90s",
+    "00s",
+    "10s"
+  )) %>%
+  bind_rows(.id = "model")
+
+row.names(anova_tbl) <- NULL
 
 anova_tbl %>%
-  kbl() %>%
-  kable_material() %>%
-  pack_rows("60s", 1, 2, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("70s", 3, 4, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("80s", 5, 6, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("90s", 7, 8, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("00s", 9, 10, label_row_css = "background-color: #666; color: #fff;") %>%
-  pack_rows("10s", 11, 12, label_row_css = "background-color: #666; color: #fff;")
+  datatable(
+    extensions = "RowGroup",
+    options = list(rowGroup = list(
+      dataSrc = 1,
+      startRender = JS(
+        "function(rows, group) {",
+        "  var style ='background-color:  #013220;'",
+        "  var td = `<td style='${style}' colspan=12>${group}</td>`;",
+        "  return $(`<tr>${td}</tr>`);",
+        "}"
+      )
+    ))
+  ) %>%
+  formatRound(columns = c(3, 5, 6), digits = 2)
 ```
 
 ## VIF Table
@@ -326,10 +382,9 @@ colnames(vif_tbl) <- c(
 )
 
 vif_tbl %>%
-  kbl() %>%
-  kable_material() %>%
-  scroll_box(width = "100%", height = "700px")
-```
+  datatable() %>%
+  formatRound(columns = 1:6, digits = 2)
+  ```
 ## Model Evaluation Table
 ```{r}
 
@@ -345,12 +400,11 @@ glance_tbl <- reduced_model$glance %>%
   ))
 
 glance_tbl %>%
-  kbl() %>%
-  kable_material()
+  datatable() %>%
+  formatRound(columns = c(2, 4, 5, 6, 7), digits = 2)
 ```
 
 ```{r}
-
 scatter_lst <- map2(reduced_model$data, reduced_model$model, function(data, model) {
   data %>%
     dplyr::select(where(is.double)) %>%
@@ -362,86 +416,83 @@ scatter_lst <- map2(reduced_model$data, reduced_model$model, function(data, mode
 })
 ```
 
-### Evaluating Linear Assumption 
+## Evaluating Linear Assumption 
 
-#### 60s
+### 60s
+
 ```{r}
 scatter_lst[[1]]
 ```
----
 
-#### 70s
+### 70s
+
 ```{r}
 scatter_lst[[2]]
 ```
 
----
+### 80s
 
-#### 80s
 ```{r}
 scatter_lst[[3]]
 ```
 
----
+### 90s
 
-#### 90s
 ```{r}
 scatter_lst[[4]]
 ```
----
 
-#### 00s
+### 00s
+
 ```{r}
 scatter_lst[[5]]
 ```
----
 
-#### 10s
+### 10s
+
 ```{r}
 scatter_lst[[6]]
 ```
----
 
-### Residual Analysis
+## Residual Analysis
 
-#### 60s
+### 60s 
+
 ```{r}
-reduced_model$model[[1]] %>% autoplot()
-```
----
-
-#### 70s
-```{r}
-reduced_model$model[[2]] %>% autoplot()
-```
----
-
-#### 80s
-```{r}
-reduced_model$model[[3]] %>% autoplot()
-```
----
-
-#### 90s
-```{r}
-reduced_model$model[[4]] %>% autoplot()
-```
----
-
-#### 00s
-```{r}
-reduced_model$model[[5]] %>% autoplot()
+reduced_model$model[[1]] %>% autoplot(which = 1:2)
 ```
 
----
+### 70s
 
-#### 10s
 ```{r}
-reduced_model$model[[6]] %>% autoplot()
+reduced_model$model[[2]] %>% autoplot(which = 1:2)
+```
+
+### 80s
+
+```{r}
+reduced_model$model[[3]] %>% autoplot(which = 1:2)
+```
+
+### 90s
+
+```{r}
+reduced_model$model[[4]] %>% autoplot(which = 1:2)
+```
+
+### 00s
+
+```{r}
+reduced_model$model[[5]] %>% autoplot(which = 1:2)
+```
+
+### 10s
+
+```{r}
+reduced_model$model[[6]] %>% autoplot(which = 1:2)
 ```
 
 ```{r}
-
 plot_summs(reduced_model$model,
   model.names = c(
     "60s",
@@ -453,9 +504,6 @@ plot_summs(reduced_model$model,
   )
 )
 ```
-
-
-
 
 # Conclusion
 
