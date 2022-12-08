@@ -262,18 +262,17 @@ reduced_model <- reduced_model %>%
 
 ## Full Model Summary
 ```{r}
-
 full_model %>%
   pull(summary) %>%
   bind_rows() %>%
   kbl() %>%
   kable_material() %>%
-  #   pack_rows("60s", 1, 29, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("70s", 30, 57, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("80s", 58, 85, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("90s", 86, 113, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("00s", 114, 142, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("10s", 143, 171, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("60s", 1, 23, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("70s", 24, 46, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("80s", 47, 69, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("90s", 70, 92, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("00s", 93, 114, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("10s", 115, 120, label_row_css = "background-color: #666; color: #fff;") %>%
   scroll_box(width = "100%", height = "700px")
 ```
 
@@ -285,12 +284,12 @@ reduced_model %>%
   bind_rows() %>%
   kbl() %>%
   kable_material() %>%
-  #   pack_rows("60s", 1, 29, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("70s", 30, 57, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("80s", 58, 85, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("90s", 86, 113, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("00s", 114, 142, label_row_css = "background-color: #666; color: #fff;") %>%
-  #   pack_rows("10s", 143, 171, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("60s", 1, 13, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("70s", 14, 22, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("80s", 23, 36, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("90s", 37, 49, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("00s", 50, 59, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("10s", 60, 62, label_row_css = "background-color: #666; color: #fff;") %>%
   scroll_box(width = "100%", height = "700px")
 ```
 
@@ -299,14 +298,20 @@ reduced_model %>%
 anova_tbl <- map2(full_model$model, reduced_model$model, ~ anova(.x, .y, test = "LRT")) %>%
   bind_rows()
 row.names(anova_tbl) <- c()
+
 anova_tbl %>%
   kbl() %>%
-  kable_material()
+  kable_material() %>%
+  pack_rows("60s", 1, 2, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("70s", 3, 4, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("80s", 5, 6, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("90s", 7, 8, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("00s", 9, 10, label_row_css = "background-color: #666; color: #fff;") %>%
+  pack_rows("10s", 11, 12, label_row_css = "background-color: #666; color: #fff;")
 ```
 
 ## VIF Table
 ```{r}
-
 vif_tbl <- reduced_model$vif %>%
   bind_rows() %>%
   t()
@@ -363,33 +368,39 @@ scatter_lst <- map2(reduced_model$data, reduced_model$model, function(data, mode
 ```{r}
 scatter_lst[[1]]
 ```
-
+---
 
 #### 70s
 ```{r}
 scatter_lst[[2]]
 ```
 
+---
+
 #### 80s
 ```{r}
 scatter_lst[[3]]
 ```
 
+---
+
 #### 90s
 ```{r}
 scatter_lst[[4]]
 ```
+---
 
 #### 00s
 ```{r}
 scatter_lst[[5]]
 ```
+---
 
 #### 10s
 ```{r}
 scatter_lst[[6]]
 ```
-
+---
 
 ### Residual Analysis
 
@@ -397,26 +408,32 @@ scatter_lst[[6]]
 ```{r}
 reduced_model$model[[1]] %>% autoplot()
 ```
+---
 
 #### 70s
 ```{r}
 reduced_model$model[[2]] %>% autoplot()
 ```
+---
 
 #### 80s
 ```{r}
 reduced_model$model[[3]] %>% autoplot()
 ```
+---
 
 #### 90s
 ```{r}
 reduced_model$model[[4]] %>% autoplot()
 ```
+---
 
 #### 00s
 ```{r}
 reduced_model$model[[5]] %>% autoplot()
 ```
+
+---
 
 #### 10s
 ```{r}
